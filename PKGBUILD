@@ -1,7 +1,7 @@
 # Maintainer: Local package build
 _pkgname=rediwm
 pkgname=rediwm-git
-pkgver=0.1.7.r61.2ab4091
+pkgver=0.1.7.r77.82ed26e
 pkgrel=1
 pkgdesc='Wayland compositor and desktop shell written in Zig'
 arch=('x86_64')
@@ -66,47 +66,21 @@ pkgver() {
 build() {
   cd "$_pkgname"
   zig build -Doptimize=ReleaseSafe -j"$(nproc)" \
+    -Dinstall-prefix=/usr \
     --prefix "$srcdir/rediwm-build-prefix"
 }
+
 package() {
   cd "$_pkgname"
 
-  # Copy the build already staged under $srcdir; never install to the host.
-  install -d "$pkgdir/usr/local"
-  cp -a "$srcdir/rediwm-build-prefix/." "$pkgdir/usr/local/"
-  # These integration files belong in the system data directories.
-  install -Dm644 \
-    "$pkgdir/usr/local/share/xdg-desktop-portal/portals/rediwm.portal" \
-    "$pkgdir/usr/share/xdg-desktop-portal/portals/rediwm.portal"
-  rm "$pkgdir/usr/local/share/xdg-desktop-portal/portals/rediwm.portal"
+  # Use the upstream installer to stage the complete /usr layout and
+  # Arch-specific display-manager integration without touching the host.
+  REDIWM_PAM_PROFILE=arch DESTDIR="$pkgdir" \
+    sh scripts/install-session-root.sh \
+    "$PWD" "$srcdir/rediwm-build-prefix" yes
 
-  install -Dm644 \
-    "$pkgdir/usr/local/share/polkit-1/actions/org.rediwm.accounts.policy" \
-    "$pkgdir/usr/share/polkit-1/actions/org.rediwm.accounts.policy"
-  rm "$pkgdir/usr/local/share/polkit-1/actions/org.rediwm.accounts.policy"
-
-  install -Dm644 \
-    "$pkgdir/usr/local/share/wayland-sessions/rediwm-release-safe.desktop" \
-    "$pkgdir/usr/share/wayland-sessions/rediwm-release-safe.desktop"
-  rm "$pkgdir/usr/local/share/wayland-sessions/rediwm-release-safe.desktop"
-  install -Dm644 LICENSE-MIT "$pkgdir/usr/share/licenses/$pkgname/LICENSE-MIT"
-  install -Dm644 LICENSE-APACHE "$pkgdir/usr/share/licenses/$pkgname/LICENSE-APACHE"
-
-  # Arch-native display manager integration. Installing these files does not
-  # enable the service or replace the currently selected display manager.
-  install -Dm644 data/rediwm-dm.service \
-    "$pkgdir/usr/lib/systemd/system/rediwm-dm.service"
-  install -Dm644 data/rediwm-dm.sysusers \
-    "$pkgdir/usr/lib/sysusers.d/rediwm-dm.conf"
-  install -Dm644 data/rediwm-dm.tmpfiles \
-    "$pkgdir/usr/lib/tmpfiles.d/rediwm-dm.conf"
-  install -Dm644 data/rediwm-dm.conf \
-    "$pkgdir/etc/rediwm/dm.conf"
-  install -Dm644 data/pam/rediwm-greeter \
-    "$pkgdir/etc/pam.d/rediwm-greeter"
-  install -Dm644 data/pam/arch/rediwm-dm \
-    "$pkgdir/etc/pam.d/rediwm-dm"
-  install -Dm644 data/pam/arch/rediwm-dm-autologin \
-    "$pkgdir/etc/pam.d/rediwm-dm-autologin"
-
+  install -Dm644 LICENSE-MIT \
+    "$pkgdir/usr/share/licenses/$pkgname/LICENSE-MIT"
+  install -Dm644 LICENSE-APACHE \
+    "$pkgdir/usr/share/licenses/$pkgname/LICENSE-APACHE"
 }
